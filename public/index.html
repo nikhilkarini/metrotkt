@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Metro Transit — Automatic Fare Collection & Apple Wallet Pass</title>
+  <meta name="description" content="Apple Ecosystem styled Metro Automatic Fare Collection journey: Dijkstra route & fare quoting, Apple Pay simulated checkout, HMAC-SHA256 Apple Wallet passes, and turnstile camera scanner.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- Dynamic Island / Apple HUD Notification Toast -->
+  <div class="dynamic-island-container">
+    <div id="dynamic-island-toast" class="dynamic-island-toast" role="status" aria-live="polite">
+      <div class="toast-icon" id="toast-icon"></div>
+      <span class="toast-message" id="toast-message">Welcome to Metro AFC</span>
+    </div>
+  </div>
+
+  <!-- Apple Navigation Header -->
+  <header>
+    <div class="nav-container">
+      <a href="#" class="brand" onclick="switchView('planner')">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="3" width="16" height="16" rx="4"></rect>
+            <path d="M4 11h16"></path>
+            <path d="M12 3v8"></path>
+            <circle cx="8" cy="15" r="1"></circle>
+            <circle cx="16" cy="15" r="1"></circle>
+          </svg>
+        </div>
+        <div>
+          <span>Metro</span><span class="brand-accent">Transit</span>
+        </div>
+      </a>
+
+      <!-- Apple Segmented Navigation Bar -->
+      <nav class="nav-tabs" role="tablist" aria-label="Apple Navigation">
+        <button class="nav-btn active" id="tab-planner" role="tab" aria-selected="true" onclick="switchView('planner')">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+          Plan Journey
+        </button>
+        <button class="nav-btn" id="tab-ticket" role="tab" aria-selected="false" onclick="switchView('ticket')">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"></rect><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          Wallet Pass
+        </button>
+        <button class="nav-btn" id="tab-gate" role="tab" aria-selected="false" onclick="switchView('gate')">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          Turnstile Scanner
+        </button>
+        <button class="nav-btn" id="tab-admin" role="tab" aria-selected="false" onclick="switchView('admin')">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          Console
+        </button>
+        <button class="nav-btn" id="tab-about" role="tab" aria-selected="false" onclick="switchView('about')">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Architecture
+        </button>
+      </nav>
+
+      <!-- Connect Mobile Device Quick Action -->
+      <div class="header-actions">
+        <button type="button" class="btn-mobile-connect" onclick="openMobileConnectModal()" title="Scan to open on iPhone or Android">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+          Scan on Mobile
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Guided Journey Workflow Stepper -->
+  <div class="workflow-stepper-wrap">
+    <div class="workflow-stepper" id="workflow-stepper">
+      <button class="stepper-pill active" id="step-pill-planner" onclick="switchView('planner')">
+        <span class="stepper-num">1</span> Plan Trip
+      </button>
+      <span class="stepper-divider">›</span>
+      <button class="stepper-pill upcoming" id="step-pill-route" onclick="switchView('planner')">
+        <span class="stepper-num">2</span> Route & Fare
+      </button>
+      <span class="stepper-divider">›</span>
+      <button class="stepper-pill upcoming" id="step-pill-checkout" onclick="switchView('checkout')">
+        <span class="stepper-num">3</span> Apple Pay
+      </button>
+      <span class="stepper-divider">›</span>
+      <button class="stepper-pill upcoming" id="step-pill-ticket" onclick="switchView('ticket')">
+        <span class="stepper-num">4</span> Wallet Pass
+      </button>
+      <span class="stepper-divider">›</span>
+      <button class="stepper-pill upcoming" id="step-pill-gate" onclick="switchView('gate')">
+        <span class="stepper-num">5</span> Gate Turnstile
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Passenger Journey Views -->
+  <main>
+
+    <!-- ========================================================= -->
+    <!-- VIEW 1: JOURNEY PLANNER & ROUTE QUOTE                    -->
+    <!-- ========================================================= -->
+    <section id="view-planner" class="view-section active">
+
+      <!-- Quick Demo Journeys Bar -->
+      <div class="quick-journeys-bar">
+        <span class="quick-journey-label">⚡ Quick Demos:</span>
+        <button type="button" class="quick-journey-pill" onclick="loadQuickJourney('B1', 'R1')">
+          Bayview ➔ Airport City (Transfer @ CJ)
+        </button>
+        <button type="button" class="quick-journey-pill" onclick="loadQuickJourney('B2', 'B5')">
+          Harbor Point ➔ Market Square (Blue Line)
+        </button>
+        <button type="button" class="quick-journey-pill" onclick="loadQuickJourney('R1', 'R2')">
+          Airport City ➔ Aero Club (Short Hop ₹10)
+        </button>
+      </div>
+
+      <!-- Interactive Apple Maps Metro Diagram -->
+      <div class="metro-map-card">
+        <div class="map-header">
+          <h2 style="font-size:1.15rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:8px;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--apple-blue)" stroke-width="2.2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon></svg>
+            Interactive Metro Network
+          </h2>
+          <div class="line-legend">
+            <div class="legend-item"><span class="legend-dot blue"></span> Blue Line (B1–B6)</div>
+            <div class="legend-item"><span class="legend-dot red"></span> Red Line (R1–R6)</div>
+            <div class="legend-item"><span class="legend-dot interchange"></span> Central Junction (Interchange)</div>
+          </div>
+        </div>
+
+        <div class="metro-svg-container">
+          <svg class="metro-svg" viewBox="0 0 740 260" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <filter id="glow-blue" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#0a84ff" flood-opacity="0.45"/>
+              </filter>
+              <filter id="glow-red" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#ff453a" flood-opacity="0.45"/>
+              </filter>
+              <filter id="glow-emerald" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#30d158" flood-opacity="0.6"/>
+              </filter>
+            </defs>
+
+            <!-- Blue Line Track (Horizontal) -->
+            <line x1="60" y1="130" x2="680" y2="130" stroke="#0a84ff" stroke-width="5" stroke-linecap="round" filter="url(#glow-blue)"/>
+
+            <!-- Red Line Track (Diagonal through Central Junction) -->
+            <line x1="160" y1="30" x2="580" y2="230" stroke="#ff453a" stroke-width="5" stroke-linecap="round" filter="url(#glow-red)"/>
+
+            <!-- Stations on Blue Line: B1, B2, B3, CJ, B5, B6 -->
+            <g class="map-node" data-code="B1" onclick="handleMapStationClick('B1')" transform="translate(60, 130)">
+              <circle r="8" fill="#000000" stroke="#0a84ff" stroke-width="3"/>
+              <text y="-20" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">Bayview (B1)</text>
+              <text y="24" text-anchor="middle" fill="#8e8e93" font-size="9" font-weight="600">Terminal</text>
+            </g>
+
+            <g class="map-node" data-code="B2" onclick="handleMapStationClick('B2')" transform="translate(180, 130)">
+              <circle r="6" fill="#000000" stroke="#0a84ff" stroke-width="2.5"/>
+              <text y="-18" text-anchor="middle" fill="#e5e5ea" font-size="11" font-weight="500">Harbor Point (B2)</text>
+            </g>
+
+            <g class="map-node" data-code="B3" onclick="handleMapStationClick('B3')" transform="translate(290, 130)">
+              <circle r="6" fill="#000000" stroke="#0a84ff" stroke-width="2.5"/>
+              <text y="-18" text-anchor="middle" fill="#e5e5ea" font-size="11" font-weight="500">Tech Park (B3)</text>
+            </g>
+
+            <!-- CJ Central Junction Interchange -->
+            <g class="map-node" data-code="CJ" onclick="handleMapStationClick('CJ')" transform="translate(370, 130)">
+              <circle r="13" fill="#000000" stroke="#30d158" stroke-width="3.5" filter="url(#glow-emerald)"/>
+              <circle r="5" fill="#30d158"/>
+              <text y="-24" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="800">Central Junction (CJ)</text>
+              <text y="30" text-anchor="middle" fill="#30d158" font-size="9" font-weight="700" letter-spacing="0.05em">INTERCHANGE</text>
+            </g>
+
+            <g class="map-node" data-code="B5" onclick="handleMapStationClick('B5')" transform="translate(480, 130)">
+              <circle r="6" fill="#000000" stroke="#0a84ff" stroke-width="2.5"/>
+              <text y="-18" text-anchor="middle" fill="#e5e5ea" font-size="11" font-weight="500">Market Sq (B5)</text>
+            </g>
+
+            <g class="map-node" data-code="B6" onclick="handleMapStationClick('B6')" transform="translate(680, 130)">
+              <circle r="8" fill="#000000" stroke="#0a84ff" stroke-width="3"/>
+              <text y="-20" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">Sunrise Hills (B6)</text>
+              <text y="24" text-anchor="middle" fill="#8e8e93" font-size="9" font-weight="600">Terminal</text>
+            </g>
+
+            <!-- Stations on Red Line: R1, R2, CJ, R4, R5, R6 -->
+            <g class="map-node" data-code="R1" onclick="handleMapStationClick('R1')" transform="translate(160, 30)">
+              <circle r="8" fill="#000000" stroke="#ff453a" stroke-width="3"/>
+              <text x="14" y="4" text-anchor="start" fill="#ffffff" font-size="11" font-weight="700">Airport City (R1)</text>
+            </g>
+
+            <g class="map-node" data-code="R2" onclick="handleMapStationClick('R2')" transform="translate(265, 80)">
+              <circle r="6" fill="#000000" stroke="#ff453a" stroke-width="2.5"/>
+              <text x="14" y="4" text-anchor="start" fill="#e5e5ea" font-size="11" font-weight="500">Aero Club (R2)</text>
+            </g>
+
+            <g class="map-node" data-code="R4" onclick="handleMapStationClick('R4')" transform="translate(475, 180)">
+              <circle r="6" fill="#000000" stroke="#ff453a" stroke-width="2.5"/>
+              <text x="14" y="4" text-anchor="start" fill="#e5e5ea" font-size="11" font-weight="500">Grand Univ (R4)</text>
+            </g>
+
+            <g class="map-node" data-code="R5" onclick="handleMapStationClick('R5')" transform="translate(530, 205)">
+              <circle r="6" fill="#000000" stroke="#ff453a" stroke-width="2.5"/>
+              <text x="14" y="4" text-anchor="start" fill="#e5e5ea" font-size="11" font-weight="500">Green Meadows (R5)</text>
+            </g>
+
+            <g class="map-node" data-code="R6" onclick="handleMapStationClick('R6')" transform="translate(580, 230)">
+              <circle r="8" fill="#000000" stroke="#ff453a" stroke-width="3"/>
+              <text x="14" y="4" text-anchor="start" fill="#ffffff" font-size="11" font-weight="700">South Park (R6)</text>
+            </g>
+          </svg>
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-tertiary); text-align:center; margin-top:10px;">
+          Tap any station node on the map to set Origin or Destination
+        </p>
+      </div>
+
+      <!-- Planner Grid: Input Form & Quote Output -->
+      <div class="grid-2">
+        <!-- Planner Form -->
+        <div class="card">
+          <h2 class="card-title">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--apple-blue)" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            Plan Metro Route
+          </h2>
+
+          <form id="planner-form" onsubmit="handleCalculateRoute(event)">
+            <!-- Origin -->
+            <div class="form-group">
+              <label for="select-origin">Boarding Station (Origin)</label>
+              <select id="select-origin" required aria-label="Origin Station">
+                <option value="">-- Choose Origin Station --</option>
+              </select>
+            </div>
+
+            <!-- Swap Stations Button -->
+            <div style="display:flex; justify-content:center; margin:-8px 0 12px;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="swapOriginDestination()" title="Swap Origin and Destination">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Reverse Direction
+              </button>
+            </div>
+
+            <!-- Destination -->
+            <div class="form-group">
+              <label for="select-destination">Destination Station</label>
+              <select id="select-destination" required aria-label="Destination Station">
+                <option value="">-- Choose Destination Station --</option>
+              </select>
+            </div>
+
+            <!-- Route Preference Optimization Mode -->
+            <div class="form-group">
+              <label>Routing Optimization Engine</label>
+              <div class="radio-group">
+                <div class="radio-card">
+                  <input type="radio" id="mode-fastest" name="routeMode" value="fastest" checked>
+                  <label for="mode-fastest">
+                    <span class="title">⚡ Fastest Route</span>
+                    <span class="desc">Includes 5m transfer penalty</span>
+                  </label>
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="mode-fewest" name="routeMode" value="fewest-interchanges">
+                  <label for="mode-fewest">
+                    <span class="title">🔄 Fewest Transfers</span>
+                    <span class="desc">Minimizes line changes first</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Button -->
+            <button type="submit" id="btn-get-quote" class="btn btn-primary btn-block">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              Calculate Route & Server Fare
+            </button>
+          </form>
+        </div>
+
+        <!-- Route Quote & Fare Breakdown -->
+        <div class="card" id="quote-container" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 class="card-title" style="margin-bottom:0;">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--apple-green)" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              Trip Itinerary Quote
+            </h2>
+            <span class="apple-badge badge-green" id="quote-route-mode-badge">Fastest</span>
+          </div>
+
+          <!-- Hero fare & metrics -->
+          <div class="quote-summary-card">
+            <div class="quote-fare-hero">
+              <div>
+                <div style="font-size:0.75rem; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.05em;">Total Fare</div>
+                <div class="quote-fare-amount" id="quote-fare">₹0</div>
+              </div>
+              <div style="text-align:right;">
+                <span class="apple-badge badge-gray" id="quote-slab-label">Distance Slab</span>
+              </div>
+            </div>
+
+            <div class="quote-metrics-grid">
+              <div class="quote-metric-item">
+                <div class="quote-metric-val" id="quote-time">0m</div>
+                <div class="quote-metric-lbl">Total Time</div>
+              </div>
+              <div class="quote-metric-item">
+                <div class="quote-metric-val" id="quote-distance">0 km</div>
+                <div class="quote-metric-lbl">Distance</div>
+              </div>
+              <div class="quote-metric-item">
+                <div class="quote-metric-val" id="quote-stops">0</div>
+                <div class="quote-metric-lbl">Stops</div>
+              </div>
+              <div class="quote-metric-item">
+                <div class="quote-metric-val" id="quote-transfers">0</div>
+                <div class="quote-metric-lbl">Transfers</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Line breakdown & segments -->
+          <div id="quote-timeline" style="margin-bottom:20px;"></div>
+
+          <!-- Checkout CTA -->
+          <button type="button" class="btn btn-primary btn-block" onclick="startCheckoutFromQuote()">
+            <span>Pay Checkout — ₹<span id="btn-checkout-fare">0</span></span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+
+        <!-- Placeholder when no quote is active -->
+        <div class="card" id="quote-placeholder" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:340px;">
+          <div style="width:64px; height:64px; border-radius:18px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; margin-bottom:14px;">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--text-tertiary)" stroke-width="1.8"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon></svg>
+          </div>
+          <h3 style="color:#fff; font-size:1.15rem; font-weight:700; margin-bottom:6px;">Select Route to Get Quote</h3>
+          <p style="max-width:320px; font-size:0.88rem; color:var(--text-secondary);">
+            Choose your origin and destination above or click directly on the metro map to compute routes and fare slabs.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- VIEW 2: APPLE PAY CHECKOUT SHEET                         -->
+    <!-- ========================================================= -->
+    <section id="view-checkout" class="view-section">
+      <div class="apple-pay-sheet">
+        <div class="apple-pay-card">
+          <!-- Header -->
+          <div class="apple-pay-header">
+            <div class="apple-pay-logo">
+              <span>Pay</span>
+            </div>
+            <span class="apple-badge badge-green">Transit Express</span>
+          </div>
+
+          <!-- Virtual Transit Card Mockup -->
+          <div class="transit-card-mockup">
+            <div>
+              <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.7);">Metro Transit Card</div>
+              <div style="font-size:1.15rem; font-weight:800; color:#fff;" id="checkout-journey-title">Bayview ➔ Central Junction</div>
+              <div style="font-size:0.8rem; color:rgba(255,255,255,0.7); margin-top:4px;" id="checkout-details-line">3 stops • 12 mins</div>
+            </div>
+            <div style="text-align:right;">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#ffffff" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+            </div>
+          </div>
+
+          <!-- Itemized breakdown -->
+          <div class="checkout-item-row">
+            <span>Metro Single Fare</span>
+            <span id="checkout-base-fare">₹30</span>
+          </div>
+          <div class="checkout-item-row">
+            <span>Distance Slab Applied</span>
+            <span id="checkout-slab-badge">5 to &lt; 12 km</span>
+          </div>
+          <div class="checkout-item-row">
+            <span>Digital Processing Fee</span>
+            <span style="color:var(--apple-green);">Free (₹0)</span>
+          </div>
+
+          <div class="checkout-item-row total">
+            <span>Total Payable</span>
+            <span style="color:var(--apple-green);" id="checkout-total-fare">₹30</span>
+          </div>
+
+          <!-- Apple Pay CTA Button -->
+          <button type="button" class="apple-pay-trigger-btn" id="apple-pay-btn" onclick="handleSimulatePayment('SUCCESS')">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-1.98.6-2.62 1.34-.57.65-1.06 1.71-.93 2.73 1 .08 2.01-.5 2.63-1.22z"/>
+            </svg>
+            Pay with Touch ID / Face ID
+          </button>
+
+          <!-- Alternative test button for simulation -->
+          <div style="display:flex; gap:10px; margin-top:14px;">
+            <button type="button" class="btn btn-secondary btn-sm" style="flex:1;" onclick="handleSimulatePayment('FAILED')">
+              Simulate Card Decline
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" style="flex:1;" onclick="switchView('planner')">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- VIEW 3: APPLE WALLET PASS (HMAC-SHA256 SIGNED QR PASS)   -->
+    <!-- ========================================================= -->
+    <section id="view-ticket" class="view-section">
+      <div class="ticket-wrapper">
+        <div class="apple-wallet-pass" id="ticket-card">
+          <!-- Pass Header -->
+          <div class="pass-header">
+            <div class="pass-brand">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--apple-blue)" stroke-width="2.2"><rect x="4" y="3" width="16" height="16" rx="4"></rect><path d="M4 11h16"></path></svg>
+              <span>METRO TRANSIT PASS</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="ticket-status-badge status-active" id="ticket-badge">ACTIVE</span>
+            </div>
+          </div>
+
+          <!-- Pass Body -->
+          <div class="pass-body">
+            <div style="font-size:0.75rem; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">
+              TICKET REFERENCE
+            </div>
+            <div style="font-family:var(--font-mono); font-size:0.95rem; font-weight:700; color:#ffffff; margin-bottom:18px;" id="ticket-id-display">
+              TKT-XXXXXXXX
+            </div>
+
+            <!-- Origin ➔ Destination Display -->
+            <div class="pass-route-row">
+              <div class="pass-station-block">
+                <div class="pass-code" id="ticket-origin-code">B1</div>
+                <div class="pass-name" id="ticket-origin-name">Bayview</div>
+              </div>
+
+              <div class="pass-arrow">➔</div>
+
+              <div class="pass-station-block dest">
+                <div class="pass-code" id="ticket-dest-code">CJ</div>
+                <div class="pass-name" id="ticket-destination-name">Central Junction</div>
+              </div>
+            </div>
+
+            <!-- Perforation fold line -->
+            <div class="pass-perforation">
+              <div class="perforation-line"></div>
+            </div>
+
+            <!-- High-Contrast Pure White QR Pod for instant phone camera scanning -->
+            <div class="pass-qr-pod">
+              <img id="ticket-qr-img" src="" alt="HMAC-SHA256 Signed QR Transit Ticket">
+              <div style="font-size:0.75rem; color:#475569; font-weight:700; margin-top:8px; display:flex; align-items:center; gap:4px;">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#059669" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                HMAC-SHA256 AUTHENTICATED
+              </div>
+            </div>
+
+            <div style="font-size:0.78rem; text-align:center; color:var(--text-secondary); margin-bottom:16px;">
+              Scan at turnstile camera or enter token below
+            </div>
+
+            <!-- Pass Metadata Grid -->
+            <div class="pass-meta-grid">
+              <div class="pass-meta-col">
+                <small>Fare Paid</small>
+                <span id="ticket-fare-display">₹30</span>
+              </div>
+              <div class="pass-meta-col">
+                <small>Journey Duration</small>
+                <span id="ticket-duration-display">12 Mins</span>
+              </div>
+              <div class="pass-meta-col">
+                <small>Stops</small>
+                <span id="ticket-stops-display">3 Stops</span>
+              </div>
+              <div class="pass-meta-col">
+                <small>Valid Until</small>
+                <span id="ticket-expiry-display">120 Mins</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pass Action CTAs -->
+        <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
+          <button type="button" class="btn btn-primary btn-block" onclick="sendTicketToGateSimulator()">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Proceed to Turnstile Gate Scanner
+          </button>
+          <div style="display:flex; gap:10px;">
+            <button type="button" class="btn btn-secondary" style="flex:1;" onclick="copyTicketToken()">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy Token
+            </button>
+            <button type="button" class="btn btn-secondary" style="flex:1;" onclick="printTicketPass()">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              Print Pass
+            </button>
+          </div>
+          <button type="button" class="btn btn-secondary btn-block" onclick="switchView('planner')">
+            Plan Another Trip
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- VIEW 4: GATE SIMULATOR (ENTRY & EXIT MODES)              -->
+    <!-- ========================================================= -->
+    <section id="view-gate" class="view-section">
+      <div style="max-width:960px; margin:0 auto;">
+
+        <!-- In-Trip Guided Banner -->
+        <div id="gate-guidance-banner" style="display:none;"></div>
+
+        <!-- Apple OLED Turnstile Indicator -->
+        <div class="gate-turnstile" id="turnstile-box">
+          <div class="turnstile-indicator ready" id="turnstile-indicator">
+            <div id="turnstile-icon">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;" id="turnstile-mode-label">
+            ENTRY TURNSTILE
+          </div>
+          <div class="turnstile-msg" id="turnstile-status-text">
+            Gate Closed • Ready for Entry Scan
+          </div>
+          <div style="font-size:0.84rem; color:var(--text-secondary); margin-top:6px;" id="turnstile-subtext">
+            Scan QR pass with mobile camera or paste signed token string below
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- Turnstile Camera Scanner -->
+          <div class="card">
+            <h2 class="card-title">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--apple-blue)" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              Turnstile Camera Scanner
+            </h2>
+
+            <!-- Gate Mode Toggle -->
+            <label>Turnstile Operational Mode</label>
+            <div class="gate-mode-selector">
+              <button type="button" class="gate-mode-btn active entry" id="gate-btn-entry" onclick="setGateMode('ENTRY')">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--apple-green)" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 8 12 12 14 14"></polyline></svg>
+                ENTRY GATE
+              </button>
+              <button type="button" class="gate-mode-btn exit" id="gate-btn-exit" onclick="setGateMode('EXIT')">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--apple-red)" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+                EXIT GATE
+              </button>
+            </div>
+
+            <!-- Gate Station -->
+            <div class="form-group">
+              <label for="gate-station-select">Turnstile Physical Location</label>
+              <select id="gate-station-select" onchange="handleGateStationChange()"></select>
+              <small style="color:var(--text-tertiary); font-size:0.75rem; display:block; margin-top:4px;">
+                * Entry validation requires ticket origin. Exit validation permits destination or intermediate stations within paid slab.
+              </small>
+            </div>
+
+            <!-- Camera Viewfinder & Reticle -->
+            <div class="camera-scanner-container">
+              <div id="camera-reader" style="display:none;"></div>
+              
+              <div class="scanner-reticle-overlay" id="scanner-reticle-overlay">
+                <div class="reticle-box">
+                  <div class="reticle-corner tl"></div>
+                  <div class="reticle-corner tr"></div>
+                  <div class="reticle-corner bl"></div>
+                  <div class="reticle-corner br"></div>
+                  <div class="scanner-laser"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Camera lens selection (if device has multiple cameras) -->
+            <div class="form-group" id="camera-select-wrap" style="display:none;">
+              <label for="camera-select">Camera Sensor Lens</label>
+              <select id="camera-select" onchange="handleCameraSelectChange()"></select>
+            </div>
+
+            <!-- Live Camera Button -->
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+              <button type="button" class="btn btn-primary btn-block" id="btn-toggle-camera" onclick="toggleCameraScanner()">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                Start Camera Scanner
+              </button>
+              <button type="button" class="btn btn-secondary" id="btn-toggle-torch" style="display:none;" onclick="toggleTorch()" title="Flashlight">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+              </button>
+            </div>
+
+            <!-- Direct Mobile Camera Snap & Upload (Works on 100% of Phones even over HTTP!) -->
+            <div>
+              <input type="file" id="mobile-photo-input" accept="image/*" capture="environment" style="display:none;" onchange="handleMobilePhotoSelected(event)">
+              <button type="button" class="btn btn-secondary btn-block" onclick="triggerMobilePhotoInput()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                Snap QR with Phone Camera / Upload Photo
+              </button>
+              <small style="color:var(--text-tertiary); font-size:0.75rem; text-align:center; display:block; margin-top:6px;">
+                Works natively on all iPhone & Android devices even when browser stream permission is blocked
+              </small>
+            </div>
+          </div>
+
+          <!-- Manual Token Input & Security Tests -->
+          <div class="card">
+            <h2 class="card-title">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--apple-blue)" stroke-width="2.2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"></path></svg>
+              Digital Token Fallback
+            </h2>
+
+            <p style="font-size:0.84rem; color:var(--text-secondary); margin-bottom:14px;">
+              Direct cryptographically-signed token validation fallback (payload.signature):
+            </p>
+
+            <div class="form-group">
+              <label for="manual-token-input">Signed Token String</label>
+              <textarea id="manual-token-input" rows="3" placeholder="Paste signed token here..." style="font-family:var(--font-mono); font-size:0.82rem;"></textarea>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-bottom:16px;">
+              <button type="button" class="btn btn-secondary" style="flex:1;" onclick="pasteLastTicketToken()">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Use Active Ticket
+              </button>
+              <button type="button" class="btn btn-primary" style="flex:1;" onclick="handleManualValidate()">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Validate Pass
+              </button>
+            </div>
+
+            <!-- Tamper & Replay Demo Tests -->
+            <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
+              <div style="font-size:0.75rem; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">
+                Demonstration Security Test Vectors
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button type="button" class="btn btn-secondary btn-sm" style="flex:1;" onclick="testTamperedToken()">
+                  Test Forged Signature
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" style="flex:1;" onclick="testReplayScan()">
+                  Test Replay Attack
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Validation Event Audit Log -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 class="card-title" style="margin-bottom:0;">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--apple-blue)" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              Gate Validation Audit Trail
+            </h2>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="loadValidationEvents()">
+              Refresh Log
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Type</th>
+                  <th>Turnstile Station</th>
+                  <th>Status</th>
+                  <th>Audit Result</th>
+                </tr>
+              </thead>
+              <tbody id="validation-events-tbody">
+                <tr><td colspan="5" style="text-align:center; color:var(--text-tertiary); padding:20px;">No gate validation scans yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- VIEW 5: ADMIN DASHBOARD CONSOLE                          -->
+    <!-- ========================================================= -->
+    <section id="view-admin" class="view-section">
+      <!-- Admin Login -->
+      <div id="admin-login-box" style="max-width:420px; margin:40px auto;">
+        <div class="card">
+          <h2 class="card-title">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--apple-blue)" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Administrator Console
+          </h2>
+          <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:18px;">
+            Manage synthetic metro stations, toggle track availability, and inspect fare rules.
+          </p>
+
+          <form onsubmit="handleAdminLogin(event)">
+            <div class="form-group">
+              <label for="admin-password-input">Admin Password</label>
+              <input type="password" id="admin-password-input" placeholder="adminpassword123" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+              Sign In to Console
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Admin Dashboard Content -->
+      <div id="admin-dashboard-box" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+          <h2 style="font-size:1.35rem; font-weight:700; color:#fff;">⚙️ AFC Administration Console</h2>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="handleAdminLogout()">
+            Sign Out
+          </button>
+        </div>
+
+        <!-- Metrics Summary -->
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="metric-value" id="admin-stat-stations">11</div>
+            <div class="metric-label">Active Stations</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-value" id="admin-stat-connections">20</div>
+            <div class="metric-label">Connections</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-value" id="admin-stat-orders">0</div>
+            <div class="metric-label">Total Orders</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-value fare" id="admin-stat-tickets">0</div>
+            <div class="metric-label">Paid Tickets</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-value" id="admin-stat-validations">0</div>
+            <div class="metric-label">Gate Scans</div>
+          </div>
+        </div>
+
+        <!-- Station Management Table -->
+        <div class="card">
+          <h3 class="card-title">
+            <span>🚉</span> Stations & Active State Controls
+          </h3>
+          <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:14px;">
+            Toggle station availability in real-time. The Dijkstra network graph cache rebuilds instantly!
+          </p>
+
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Station Name</th>
+                  <th>Line(s)</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-stations-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Fare Rules & Tickets Grid -->
+        <div class="grid-2">
+          <!-- Fare Slabs -->
+          <div class="card">
+            <h3 class="card-title">
+              <span>💰</span> Configured Fare Slabs
+            </h3>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Min Distance</th>
+                    <th>Max Distance</th>
+                    <th>Fare (INR)</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-fares-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Recent Tickets -->
+          <div class="card">
+            <h3 class="card-title">
+              <span>🎟️</span> Recent Tickets Issued
+            </h3>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ticket ID</th>
+                    <th>Journey</th>
+                    <th>Fare</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-tickets-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- VIEW 6: ABOUT & ARCHITECTURE GUIDE                       -->
+    <!-- ========================================================= -->
+    <section id="view-about" class="view-section">
+      <div class="card" style="max-width:860px; margin:0 auto;">
+        <h2 class="card-title">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--apple-blue)" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Metro AFC Architecture & System Overview
+        </h2>
+
+        <div style="color:var(--text-secondary); font-size:0.92rem; display:flex; flex-direction:column; gap:18px; line-height:1.6;">
+          <p>
+            Welcome to the <strong>Metro Automatic Fare Collection (AFC) & Apple Wallet Pass Platform</strong> — an end-to-end local simulation engineered to model modern contactless rapid transit ticketing.
+          </p>
+
+          <h3 style="color:#fff; font-size:1.05rem;">🚇 1. Synthetic Network & Dijkstra Routing</h3>
+          <p>
+            The transit graph connects two lines: <strong>Blue Line (B1–B6)</strong> and <strong>Red Line (R1–R6)</strong> intersecting at <strong>Central Junction (CJ)</strong>.
+            Routes are computed using a stateful Dijkstra graph search where states track <code>(station, current_line)</code>.
+            In <em>Fastest-Route</em> mode, a 5-minute transfer penalty is applied whenever switching lines at an interchange.
+          </p>
+
+          <h3 style="color:#fff; font-size:1.05rem;">💰 2. Server-Enforced Fare Slabs</h3>
+          <p>
+            Fares are computed on the server based on total route distance:
+          </p>
+          <ul style="padding-left:20px;">
+            <li><strong>0 to &lt; 2 km:</strong> ₹10</li>
+            <li><strong>2 to &lt; 5 km:</strong> ₹20</li>
+            <li><strong>5 to &lt; 12 km:</strong> ₹30</li>
+            <li><strong>12 km or more:</strong> ₹40</li>
+          </ul>
+
+          <h3 style="color:#fff; font-size:1.05rem;">🔒 3. HMAC-SHA256 Cryptographic Pass Verification</h3>
+          <p>
+            The QR pass encapsulates a minimal authenticated payload:
+            <code>{ "tid": "TKT-...", "nonce": "...", "exp": 1234567890 }</code>.
+            The payload is signed with an HMAC-SHA256 signature using a server secret.
+            No passenger names or financial data are stored inside the QR code.
+          </p>
+
+          <h3 style="color:#fff; font-size:1.05rem;">🚧 4. Turnstile State Machine & Mobile Camera Scanning</h3>
+          <p>
+            Tickets follow strict atomic lifecycle transitions: <code>ACTIVE ➔ IN_TRIP ➔ USED</code>.
+            The turnstile camera scanner runs locally using <code>html5-qrcode</code> with direct support for mobile phone cameras, torch toggle, and instant photo capture fallback.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Connect Mobile Device Modal -->
+  <div class="apple-modal-overlay" id="mobile-connect-modal" onclick="if(event.target === this) closeMobileConnectModal()">
+    <div class="apple-modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="font-size:1.15rem; font-weight:700; color:#fff;">📱 Connect iPhone or Android</h3>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeMobileConnectModal()">✕</button>
+      </div>
+
+      <p style="font-size:0.84rem; color:var(--text-secondary); margin-bottom:16px;">
+        Point your phone camera at this QR code to open the Metro Transit app directly on your mobile device!
+      </p>
+
+      <div style="background:#ffffff; padding:14px; border-radius:18px; display:inline-block; margin:0 auto 16px;">
+        <img id="mobile-qr-img" src="" alt="Mobile QR Connect" style="width:200px; height:200px; display:block;">
+      </div>
+
+      <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:var(--radius-md); padding:10px; margin-bottom:14px;">
+        <div style="font-size:0.75rem; color:var(--text-tertiary); margin-bottom:4px;">Local URL</div>
+        <code style="color:var(--apple-blue); font-size:0.88rem; font-weight:700;" id="mobile-url-display">http://localhost:3000</code>
+      </div>
+
+      <button type="button" class="btn btn-primary btn-block btn-sm" onclick="copyMobileUrl()">
+        Copy Mobile URL to Clipboard
+      </button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>Metro Transit AFC • Apple Ecosystem Edition • Single-Origin Educational Monolith</p>
+  </footer>
+
+  <!-- iOS Bottom Tab Bar (Visible on Mobile) -->
+  <nav class="ios-bottom-tabbar" aria-label="Mobile Navigation">
+    <button class="ios-tab-item active" id="mobtab-planner" onclick="switchView('planner')">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon></svg>
+      <span>Plan</span>
+    </button>
+    <button class="ios-tab-item" id="mobtab-ticket" onclick="switchView('ticket')">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"></rect><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      <span>Pass</span>
+    </button>
+    <button class="ios-tab-item" id="mobtab-gate" onclick="switchView('gate')">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      <span>Turnstile</span>
+    </button>
+    <button class="ios-tab-item" id="mobtab-admin" onclick="switchView('admin')">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      <span>Console</span>
+    </button>
+    <button class="ios-tab-item" id="mobtab-about" onclick="switchView('about')">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+      <span>About</span>
+    </button>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="/vendor/html5-qrcode.min.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/gate.js"></script>
+</body>
+</html>
