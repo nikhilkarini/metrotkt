@@ -1,0 +1,12 @@
+node_modules
+.env
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.git
+.gitignore
+docs
+test
+.DS_Store
+Thumbs.db

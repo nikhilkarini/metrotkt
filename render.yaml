@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: metro-afc
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HMAC_SECRET
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        value: adminpassword123
+      - key: TRANSFER_PENALTY_MINUTES
+        value: 5
